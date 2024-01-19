@@ -263,10 +263,20 @@ class ArticleController {
             .status(HTTP_STATUS.NOT_FOUND)
             .json({ message: "Supplier not found" });
         }
-        // const oldSupplier = await Supplier.findOne({ _id: article.supplier });
-        // oldSupplier.articles.filter((e) => e._id != articleId);
-        // oldSupplier.save();
-        // console.log("oldSupp", oldSupplier);
+
+        // Remove the article from the old supplier's articles array
+        const oldSupplier = await Supplier.findOne({ _id: article.supplier });
+        oldSupplier.articles = oldSupplier.articles.filter(
+          (e) => e._id != articleId
+        );
+        await oldSupplier.save(); // Save oldSupplier sequentially
+
+        // Add the article to the new supplier's articles array
+        selectedSupplier.articles.push(article);
+
+        // Save the updated new supplier
+        await selectedSupplier.save(); // Save selectedSupplier sequentially
+
         article.supplier = selectedSupplier._id;
       }
       if (sellPrice) article.sellPrice = sellPrice;
