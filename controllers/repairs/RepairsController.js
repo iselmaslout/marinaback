@@ -1,5 +1,5 @@
 const Repair = require("../../models/repairs/Repair");
-const Repairer = require("../../models/repairers/Repairer");
+const Technicien = require("../../models/techniciens/Technicien");
 const Article = require("../../models/articles/Article");
 const HTTP_STATUS = require("../../utils/HTTP");
 
@@ -7,7 +7,7 @@ class RepairsController {
   //get All Repairs
   static getAllRepairs = async (req, res) => {
     try {
-      const repairs = await Repair.find().populate("repairer");
+      const repairs = await Repair.find().populate("technicien");
       if (!repairs) {
         return res
           .status(HTTP_STATUS.NOT_FOUND)
@@ -25,7 +25,7 @@ class RepairsController {
   static getOneRepair = async (req, res) => {
     const { repairId } = req.params;
     try {
-      const repair = await Repair.findOne({ _id: repairId });
+      const repair = await Repair.findOne({ _id: repairId }).populate("client");
       if (!repair) {
         return res
           .status(HTTP_STATUS.NOT_FOUND)
@@ -41,43 +41,44 @@ class RepairsController {
 
   //create a Repair
   static createRepair = async (req, res) => {
-    const { repairer, articles, phone } = req.body;
+    const { technicien, client, repairedArticles, totalCost } = req.body;
+    console.log(req.body);
     let VerifiedArticles = [];
     let price = 0;
 
     try {
-      if (!articles || articles.length === 0 || !repairer || !phone) {
+      if (
+        !repairedArticles ||
+        repairedArticles.length === 0 ||
+        !technicien ||
+        !client
+      ) {
         return res
           .status(HTTP_STATUS.BAD_REQUEST)
           .json({ message: "Please fill all the fields" });
       }
 
-      const selectedRepairer = await Repairer.findOne({ _id: repairer });
-      if (!selectedRepairer) {
+      const seletedTechnicien = await Technicien.findOne({ _id: technicien });
+      if (!seletedTechnicien) {
         return res
           .status(HTTP_STATUS.NOT_FOUND)
-          .json({ message: "Repairer not found" });
+          .json({ message: "Technicien not found" });
       }
 
-      if (articles && articles.length > 0) {
-        for (const articleId of articles) {
-          const article = await Article.findOne({ _id: articleId });
-          price += article.buyPrice;
-          VerifiedArticles.push(article._id);
-        }
+      if (repairedArticles && repairedArticles.length > 0) {
+        const newRepair = new Repair({
+          technicien: seletedTechnicien._id,
+          client,
+          repairedArticles,
+          price: totalCost,
+        });
+
+        await newRepair.save();
       }
-
-      const newRepair = new Repair({
-        articles: VerifiedArticles,
-        repairer: selectedRepairer._id,
-        phone,
-      });
-
-      await newRepair.save();
 
       return res
         .status(HTTP_STATUS.CREATED)
-        .json({ message: "New repair created successfully", newRepair });
+        .json({ message: "New repair created successfully" });
     } catch (error) {
       console.error(error);
       res
@@ -88,12 +89,12 @@ class RepairsController {
 
   //update a Repair
   static updateRepair = async (req, res) => {
-    const { repairId, repairer, articles, phone } = req.body;
+    const { repairId, technicien, articles, phone } = req.body;
 
     try {
       if (
         !repairId ||
-        !repairer ||
+        !technicien ||
         !articles ||
         articles.length === 0 ||
         !phone
@@ -110,11 +111,11 @@ class RepairsController {
           .json({ message: "Repair not found" });
       }
 
-      const selectedRepairer = await Repairer.findOne({ _id: repairer });
-      if (!selectedRepairer) {
+      const selectedTechnicien = await Technicien.findOne({ _id: technicien });
+      if (!selectedTechnicien) {
         return res
           .status(HTTP_STATUS.NOT_FOUND)
-          .json({ message: "Repairer not found" });
+          .json({ message: "Technicien not found" });
       }
 
       let VerifiedArticles = [];
@@ -130,7 +131,7 @@ class RepairsController {
 
       // Update the existing repair with new data
       existingRepair.articles = VerifiedArticles;
-      existingRepair.repairer = selectedRepairer._id;
+      existingRepair.technicien = selectedTechnicien._id;
       existingRepair.phone = phone;
 
       // Save the updated repair

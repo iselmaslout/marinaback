@@ -65,11 +65,11 @@ const articleSchema = mongoose.Schema(
       required: true,
       min: 1,
     },
-    barCode: {
-      type: String,
-      trim: true,
-      default: null,
-    },
+      barCode: {
+        type: String,
+        trim: true,
+        default: null,
+      },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

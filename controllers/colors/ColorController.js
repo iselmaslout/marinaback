@@ -2,7 +2,6 @@ const HTTP_STATUS = require("../../utils/HTTP");
 const Color = require("../../models/colors/Colors");
 
 class ColorController {
-
   // Get Colors
   static getColors = async (req, res) => {
     try {
@@ -75,10 +74,10 @@ class ColorController {
     } catch (error) {
       console.error(error);
       return res
-      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
-      .json({ message: "Internal Server Error" });
+        .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+        .json({ message: "Internal Server Error" });
     }
-  }; 
+  };
 
   // Update Color
   static updateColor = async (req, res) => {
@@ -109,7 +108,7 @@ class ColorController {
         .json({ message: "Internal Server Error" });
     }
   };
-  
+
   // Delete Color
   static deleteColor = async (req, res) => {
     const { colorId } = req.params;

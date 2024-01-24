@@ -66,7 +66,9 @@ class SalesController {
         };
       }
 
-      const sales = await Sale.find(query).populate("articles client");
+      const sales = await Sale.find(query)
+        .populate("client")
+        .populate("articles");
       if (!sales) {
         return res
           .status(HTTP_STATUS.NOT_FOUND)
@@ -105,33 +107,34 @@ class SalesController {
     try {
       const { description, articles, clientId, date } = req.body;
       const parsedArticles = JSON.parse(articles);
-      // Check if articles array is provided and not empty
+
       if (!parsedArticles || parsedArticles.length === 0) {
         return res
           .status(HTTP_STATUS.BAD_REQUEST)
           .json({ message: "Cannot create a Sale with no Articles" });
       }
 
-      // Validate each article and calculate total
       let total = 0;
       let totalWeight = 0;
 
       const selectedArticles = [];
+
       for (const articleId of parsedArticles) {
-        console.log("articleId :", articleId);
         const article = await Article.findOne({ _id: articleId });
+
         if (!article) {
           return res
             .status(HTTP_STATUS.NOT_FOUND)
             .json({ message: `Article with ID ${articleId} not found` });
         }
+
         selectedArticles.push(article._id);
         total += article.sellPrice;
         totalWeight += article.weight;
       }
 
-      // Validate client
       const client = await Client.findOne({ _id: clientId });
+
       if (!client) {
         return res
           .status(HTTP_STATUS.NOT_FOUND)
@@ -139,8 +142,7 @@ class SalesController {
       }
 
       const ref = await GenerateSalesReference();
-
-      // Save sale to database with the calculated total
+      // Create the sale object
       const newSale = new Sale({
         ref,
         description,
@@ -151,6 +153,13 @@ class SalesController {
         date,
       });
 
+      // Update the client's purchases array
+      client.purchases.push(newSale);
+
+      // Save the client first
+      await client.save();
+
+      // Save the sale
       await newSale.save();
 
       res
@@ -167,8 +176,9 @@ class SalesController {
   //update Sale
   static updateSale = async (req, res) => {
     const { saleId } = req.params;
-    const { status, date, client, description, articles } = req.body;
-    console.log(date);
+    const { status, date, client, description, articles, paiementData } =
+      req.body;
+    console.log(req.body);
     try {
       const sale = await Sale.findById(saleId);
       if (!sale) {
@@ -199,7 +209,6 @@ class SalesController {
         total += article.sellPrice;
         totalWeight += article.weight;
       }
-      
 
       const updatedSale = await Sale.findByIdAndUpdate(
         saleId,
@@ -211,10 +220,9 @@ class SalesController {
           articles: selectedArticles,
           total,
           totalWeight,
-        },
+          $addToSet: { payment: { $each: paiementData } },        },
         { new: true }
       );
-      console.log(updatedSale.client)
 
       if (!updatedSale) {
         return res
