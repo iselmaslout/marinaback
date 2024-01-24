@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 const ensemblesSchema = new mongoose.Schema(
   {
-    satus: {
+    status: {
       type: Boolean,
       required: true,
       default: true,

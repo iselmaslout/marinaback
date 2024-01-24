@@ -30,7 +30,6 @@ const TechniciensRoutes = require('./routes/techniciens/TechniciensRoutes')
 const RepairsRoutes = require('./routes/repairs/RepairsRoutes')
 const EnsemblesRoutes = require('./routes/ensembles/EnsembleRoutes')
 const EnsemblesCategoryRoutes = require('./routes/ensembleCategories/EnsembleCategoryRoutes')
-
 // Enable CORS for specified origins and methods
 const AllowedOrigins = require("./utils/AllowedOrigins");
 app.use(
@@ -54,10 +53,7 @@ const routes = [
   SalesRoutes,
   RoleRoutes,
   CategoriesRoutes,
-  TechniciensRoutes,
-  RepairsRoutes,
-  EnsemblesRoutes, 
-  EnsemblesCategoryRoutes
+  RepairsRoutes
 ];
 
 // Prefix all routes with "/api"
