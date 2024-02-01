@@ -40,11 +40,11 @@ const articleSchema = mongoose.Schema(
       type: String,
       required: true,
     },
-    number: {
-      type: Number,
-      required: true,
-      default: 0,
-    },
+    // countArticle: {
+    //   type: Number,
+    //   required: true,
+    //   default: 0,
+    // },
     catalog: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
@@ -65,11 +65,11 @@ const articleSchema = mongoose.Schema(
       required: true,
       min: 1,
     },
-      barCode: {
-        type: String,
-        trim: true,
-        default: null,
-      },
+    barCode: {
+      type: String,
+      trim: true,
+      default: null,
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

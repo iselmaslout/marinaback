@@ -7,7 +7,7 @@ class EnsembleController {
   //get All Ensembles
   static getAllEnsembles = async (req, res) => {
     try {
-      const ensembles = await Ensemble.find();
+      const ensembles = await Ensemble.find().populate("creator");
       if (!ensembles) {
         return res
           .status(HTTP_STATUS.NOT_FOUND)

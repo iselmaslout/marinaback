@@ -4,7 +4,7 @@ const HTTP_STATUS = require("../../utils/HTTP");
 class EnsembleCategoryController {
   static getAllCategories = async (req, res) => {
     try {
-      const categories = await EnsembleCategory.find();
+      const categories = await EnsembleCategory.find().sort({createdAt : -1});
       if (!categories) {
         return res
           .status(HTTP_STATUS.NOT_FOUND)
@@ -39,7 +39,7 @@ class EnsembleCategoryController {
 
   static createCategory = async (req, res) => {
     const { name, description, ensembles } = req.body;
-
+console.log({ensembles})
     try {
       // Check if category already exists
       const alreadyExist = await EnsembleCategory.findOne({ name });
@@ -138,8 +138,7 @@ class EnsembleCategoryController {
   };
 
   static deleteCategory = async (req, res) => {
-    const categoryId = req.params.id; // Assuming you have the category ID in the request parameters
-
+    const {categoryId} = req.params; 
     try {
       // Check if category exists
       const category = await EnsembleCategory.findById(categoryId);
@@ -150,7 +149,7 @@ class EnsembleCategoryController {
       }
 
       // Delete the category
-      await category.remove();
+      await EnsembleCategory.findByIdAndDelete(category._id);
 
       return res
         .status(HTTP_STATUS.OK)

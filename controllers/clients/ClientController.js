@@ -85,7 +85,6 @@ class ClientController {
       }
 
       const clients = await Client.find(query).populate('purchases').sort({ createdAt: -1 });
-      // console.log(clients)
       if (!clients || clients.length === 0) {
         return res
           .status(HTTP_STATUS.NOT_FOUND)

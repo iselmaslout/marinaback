@@ -20,7 +20,6 @@ class SalesController {
       startDate,
       endDate,
     } = req.query;
-    console.log(req.query);
     const query = {};
     try {
       if (search != undefined) {
@@ -105,7 +104,7 @@ class SalesController {
   //Create Sale
   static createSale = async (req, res) => {
     try {
-      const { description, articles, clientId, date } = req.body;
+      const { description, articles, clientId, date, total } = req.body;
       const parsedArticles = JSON.parse(articles);
 
       if (!parsedArticles || parsedArticles.length === 0) {
@@ -114,7 +113,6 @@ class SalesController {
           .json({ message: "Cannot create a Sale with no Articles" });
       }
 
-      let total = 0;
       let totalWeight = 0;
 
       const selectedArticles = [];
@@ -129,7 +127,6 @@ class SalesController {
         }
 
         selectedArticles.push(article._id);
-        total += article.sellPrice;
         totalWeight += article.weight;
       }
 
@@ -151,6 +148,8 @@ class SalesController {
         total,
         totalWeight,
         date,
+        total,
+        notPaid: total,
       });
 
       // Update the client's purchases array
@@ -176,9 +175,8 @@ class SalesController {
   //update Sale
   static updateSale = async (req, res) => {
     const { saleId } = req.params;
-    const { status, date, client, description, articles, paiementData } =
+    const { status, date, client, description, articles, paiementData, total } =
       req.body;
-    console.log(req.body);
     try {
       const sale = await Sale.findById(saleId);
       if (!sale) {
@@ -193,12 +191,10 @@ class SalesController {
           .json({ message: "Cannot create a Sale with no Articles" });
       }
 
-      let total = 0;
       let totalWeight = 0;
 
       const selectedArticles = [];
       for (const articleId of parsedArticles) {
-        console.log("articleId :", articleId);
         const article = await Article.findOne({ _id: articleId });
         if (!article) {
           return res
@@ -206,10 +202,20 @@ class SalesController {
             .json({ message: `Article with ID ${articleId} not found` });
         }
         selectedArticles.push(article._id);
-        total += article.sellPrice;
         totalWeight += article.weight;
       }
+      for (const articleId of selectedArticles) {
+        await Article.findByIdAndDelete(articleId);
+      }
 
+      const totalPaymentAmount = paiementData?.reduce(
+        (acc, payment) => acc + Number(payment.amount),
+        0
+      );
+
+      // Calculate notPaid amount
+      const notPaidAmount = Number(total) - Number(totalPaymentAmount);
+      console.log(notPaidAmount);
       const updatedSale = await Sale.findByIdAndUpdate(
         saleId,
         {
@@ -220,7 +226,10 @@ class SalesController {
           articles: selectedArticles,
           total,
           totalWeight,
-          $addToSet: { payment: { $each: paiementData } },        },
+          $set: { payment: paiementData },
+          paid: totalPaymentAmount, // Set the paid amount
+          notPaid: notPaidAmount, // Set the notPaid amount
+        },
         { new: true }
       );
 
@@ -277,11 +286,17 @@ class SalesController {
           .json({ message: "Sale not found" });
       }
 
-      // Update the payment array of the sale
-      sale.payment.push({ method, amount, date });
+      if (amount <= sale.notPaid) {
+        // Update the payment array of the sale
+        sale.payment.push({ method, amount, date });
 
-      //calling the updatePayments method in Sale model to save() and to update payments
-      sale.updatePayments();
+        // calling the updatePayments method in Sale model to save() and to update payments
+        sale.updatePayments();
+      } else {
+        return res
+          .status(HTTP_STATUS.BAD_REQUEST)
+          .json({ message: "Payment amount exceeds the outstanding balance." });
+      }
 
       res
         .status(HTTP_STATUS.OK)

@@ -17,8 +17,9 @@ const catalogSchema = mongoose.Schema(
       required: true,
     },
     img: {
-      type: String,
-      default: null,
+      filename: String,
+      originalname: String,
+      fileType: String, 
     },
     articles: [
       {

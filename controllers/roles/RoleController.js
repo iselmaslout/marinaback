@@ -11,7 +11,7 @@ class RoleController {
           .status(HTTP_STATUS.NOT_FOUND)
           .json({ message: "No Role was Found" });
       }
-      return res.status(HTTP_STATUS.OK).json( roles );
+      return res.status(HTTP_STATUS.OK).json(roles);
     } catch (error) {
       console.error(error);
       res
@@ -40,7 +40,6 @@ class RoleController {
   //Add role
   static addRoles = async (req, res) => {
     const { name, permission } = req.body;
-    console.log(req.body);
     try {
       if (!name) {
         return res
@@ -65,18 +64,35 @@ class RoleController {
   // Update Role
   static updateRole = async (req, res) => {
     const { roleId } = req.params;
-    const { name, permission } = req.body;
-    console.log(name);
+    const { name, permissions } = req.body;
     try {
-      if (!name) {
+      if (!name || !permissions || !Array.isArray(permissions)) {
         return res
           .status(HTTP_STATUS.BAD_REQUEST)
-          .json({ message: "Please fill all the fields" });
+          .json({
+            message:
+              "Please provide a role name and a valid array of permissions",
+          });
+      }
+
+      // Check if all permissions provided exist
+      const allPermissionsExist = await Promise.all(
+        permissions.map(async (permissionId) => {
+          const permission = await Permission.findById(permissionId);
+          return permission !== null;
+        })
+      );
+
+      // If any permission doesn't exist, return a bad request response
+      if (!allPermissionsExist.every(Boolean)) {
+        return res
+          .status(HTTP_STATUS.BAD_REQUEST)
+          .json({ message: "One or more permissions do not exist" });
       }
 
       const updatedRole = await Role.findByIdAndUpdate(
         roleId,
-        { roleName: name, permission },
+        { roleName: name, permissions },
         { new: true }
       );
       if (!updatedRole) {
@@ -94,6 +110,7 @@ class RoleController {
         .json({ message: "Internal Server Error" });
     }
   };
+
   // delete role
   static deleteRole = async (req, res) => {
     const { roleId } = req.params;

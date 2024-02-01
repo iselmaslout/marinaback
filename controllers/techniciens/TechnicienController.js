@@ -166,7 +166,6 @@ class TechnicienController {
   //delete Technicien
   static deleteTechnicien = async (req, res) => {
     const { technicienId } = req.params;
-    console.log(req.params);
     try {
       const technicien = await Technicien.findOne({ _id: technicienId });
       if (!technicien) {

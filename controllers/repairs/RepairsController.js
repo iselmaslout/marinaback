@@ -42,7 +42,6 @@ class RepairsController {
   //create a Repair
   static createRepair = async (req, res) => {
     const { technicien, client, repairedArticles, totalCost } = req.body;
-    console.log(req.body);
     let VerifiedArticles = [];
     let price = 0;
 
@@ -152,7 +151,6 @@ class RepairsController {
   //delete Repair
   static deleteRepair = async (req, res) => {
     const { repairId } = req.params;
-    console.log(repairId);
 
     try {
       const repair = await Repair.findOne({ _id: repairId });

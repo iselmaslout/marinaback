@@ -1,34 +1,35 @@
-const multer = require('multer');
-const path = require('path');
+const multer = require("multer");
+const path = require("path");
 
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadPath = path.join(__dirname, '../uploads'); // Parent directory + uploads
-
-    cb(null, uploadPath); // Destination directory for uploaded files
+  destination: (req, file, callback) => {
+    const destinationPath = getDestinationPath(req.path);
+    callback(null, destinationPath);
   },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + '-' + file.originalname); // Define file naming convention
+  filename: (req, file, callback) => {
+    // Save the original name and file type in the file object
+    file.originalName = file.originalname;
+    file.fileType = file.mimetype;
+
+    // Create a unique file name for storage
+    const fileName = `${Date.now()}_${file.originalname}`;
+    callback(null, fileName);
   },
 });
 
-// Filter function to accept PDFs and images (JPEG, PNG, GIF)
-const fileFilter = (req, file, cb) => {
-  if (
-    file.mimetype === 'application/pdf' ||
-    file.mimetype === 'image/jpeg' ||
-    file.mimetype === 'image/png' ||
-    file.mimetype === 'image/gif'
-  ) {
-    cb(null, true); // Accept the file
-  } else {
-    cb(new Error('File type not supported. Only PDF, JPEG, PNG, and GIF files are allowed.'), false);
+function getDestinationPath(requestPath) {
+  // Define logic to determine destination path based on request path
+  switch (requestPath) {
+    case "/catalogs":
+      return path.resolve(__dirname, "../../uploads/catalogs");
+    case "/articles":
+      return path.resolve(__dirname, "../../uploads/articles");
+    default:
+      // Default destination if no specific path is matched
+      return path.resolve(__dirname, "../../uploads/default");
   }
-};
+}
 
-const upload = multer({ 
-  storage: storage,
-  fileFilter: fileFilter // Specify the file filter
-});
+const upload = multer({ storage: storage });
 
 module.exports = upload;
