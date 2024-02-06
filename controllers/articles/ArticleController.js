@@ -4,8 +4,10 @@ const Supplier = require("../../models/suppliers/Supplier");
 const Catalog = require("../../models/catalogs/Catalog");
 const Category = require("../../models/categories/Category");
 const User = require("../../models/users/User");
-
+const GenerateAchatReference = require("./AchatRefsGenerator");
 const HTTP_STATUS = require("../../utils/HTTP");
+const Achat = require("../../models/achat/Achat");
+const Stock = require("../../models/stock/Stock");
 
 class ArticleController {
   // Get All Articles
@@ -13,7 +15,6 @@ class ArticleController {
     const { search, color, catalog, weight, type, price, sellPrice } =
       req.query;
     const query = {};
-    console.log(req.query);
     try {
       if (search != undefined) {
         query.name = { $regex: new RegExp(search, "i") };
@@ -83,7 +84,20 @@ class ArticleController {
           .status(HTTP_STATUS.NOT_FOUND)
           .json({ message: "No article were found" });
       }
-      return res.status(HTTP_STATUS.OK).json({ article: article || {} });
+
+      //get article's count in the stock
+      const stockArticle = await Stock.findOne({ article: article._id });
+      console.log(stockArticle);
+
+      // Extract the count from stockArticle if it exists
+      const countArticle = stockArticle ? stockArticle.stock : 0;
+
+      // Add countArticle attribute to the article object
+      const articleWithCount = { ...article.toJSON(), countArticle };
+
+      return res
+        .status(HTTP_STATUS.OK)
+        .json({ article: articleWithCount || {} });
     } catch (error) {
       console.error(error);
       res
@@ -103,7 +117,7 @@ class ArticleController {
       img,
       color,
       typeArticle,
-      number,
+      countArticle,
       // catalog,
       supplier,
       sellPrice,
@@ -122,7 +136,7 @@ class ArticleController {
         !weight ||
         !color ||
         !typeArticle ||
-        !number ||
+        !countArticle ||
         !supplier ||
         !sellPrice ||
         !category ||
@@ -137,7 +151,6 @@ class ArticleController {
       const selectedCatalog = await Catalog.findOne({ _id: category }).populate(
         "articles"
       );
-      console.log(selectedCatalog);
       if (!selectedCatalog) {
         return res
           .status(HTTP_STATUS.NOT_FOUND)
@@ -176,7 +189,6 @@ class ArticleController {
         img,
         color: selectedColor._id,
         typeArticle,
-        number,
         supplier: selectedSupplier._id,
         sellPrice,
         buyPrice,
@@ -189,6 +201,34 @@ class ArticleController {
       await selectedSupplier.save();
       selectedCatalog.articles.push(newArticle);
       await selectedCatalog.save();
+
+      const ref = await GenerateAchatReference();
+
+      const newAchat = new Achat({
+        ref,
+        article: newArticle._id,
+        countArticle,
+        supplier: selectedSupplier._id,
+        typeArticle,
+        totalweight: Number(weight) * Number(countArticle),
+        total: Number(buyPrice) * Number(countArticle),
+      });
+      await newAchat.save();
+
+      let existingStock = await Stock.findOne({ articlebarCode: barCode });
+
+      if (existingStock) {
+        // If the article is already in stock, update the stock quantity
+        existingStock.stock += countArticle;
+        await existingStock.save();
+      } else {
+        // If the article is not in stock, create a new stock entry
+        const newStock = new Stock({
+          article: newArticle._id,
+          stock: countArticle,
+        });
+        await newStock.save();
+      }
 
       res
         .status(HTTP_STATUS.CREATED)
@@ -219,7 +259,6 @@ class ArticleController {
       category,
       createdBy,
     } = req.body;
-    console.log(req.body);
 
     try {
       const article = await Article.findOne({ _id: articleId });
@@ -246,15 +285,35 @@ class ArticleController {
         article.color = selectedColor._id;
       }
       if (typeArticle) article.typeArticle = typeArticle;
-      if (number) article.number = number;
+      if (number) article.countArticle = number;
       if (catalog) {
+        // Find the selected catalog
         const selectedCatalog = await Catalog.findOne({ _id: catalog });
+
+        // Check if the selected catalog exists
         if (!selectedCatalog) {
           return res
             .status(HTTP_STATUS.NOT_FOUND)
             .json({ message: "Catalog not found" });
         }
+
+        // Remove the article from the old catalog's articles array
+        const oldCatalog = await Catalog.findOne({ _id: article.catalog });
+        if (oldCatalog) {
+          oldCatalog.articles = oldCatalog.articles.filter(
+            (e) => e._id != articleId
+          );
+          await oldCatalog.save(); // Save oldCatalog sequentially
+        }
+
+        // Update the article's catalog to the selected catalog
         article.catalog = selectedCatalog._id;
+
+        // Add the article to the selected catalog's articles array
+        selectedCatalog.articles.push(article);
+
+        // Save the updated selected catalog
+        await selectedCatalog.save();
       }
       if (supplier) {
         const selectedSupplier = await Supplier.findOne({ _id: supplier });
@@ -354,6 +413,17 @@ class ArticleController {
           .status(HTTP_STATUS.NOT_FOUND)
           .json({ message: "Article not found" });
       }
+      const catalogs = await Catalog.find({ articles: articleId });
+
+      // Remove the article from the catalogs' articles array
+      catalogs.forEach(async (catalog) => {
+        catalog.articles = catalog.articles.filter(
+          (catalogArticleId) => catalogArticleId.toString() !== articleId
+        );
+        await catalog.save();
+      });
+
+      // Delete the article
       await Article.findByIdAndDelete(articleId);
 
       res

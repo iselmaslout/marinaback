@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 const ensemblesSchema = new mongoose.Schema(
   {
-    satus: {
+    status: {
       type: Boolean,
       required: true,
       default: true,
@@ -20,11 +20,14 @@ const ensemblesSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    articles: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Article",
-      required: true,
-    },
+
+    articles: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Article",
+        required: true,
+      },
+    ],
   },
   { timestamps: true }
 );

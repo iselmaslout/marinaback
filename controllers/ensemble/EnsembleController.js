@@ -7,7 +7,7 @@ class EnsembleController {
   //get All Ensembles
   static getAllEnsembles = async (req, res) => {
     try {
-      const ensembles = await Ensemble.find();
+      const ensembles = await Ensemble.find().populate("creator");
       if (!ensembles) {
         return res
           .status(HTTP_STATUS.NOT_FOUND)
@@ -88,19 +88,6 @@ class EnsembleController {
     const { ensembleId } = req.params;
 
     try {
-      // Validate input fields
-      if (
-        !name ||
-        !description ||
-        !creator ||
-        !articles ||
-        !Array.isArray(articles)
-      ) {
-        return res
-          .status(HTTP_STATUS.BAD_REQUEST)
-          .json({ message: "Please provide valid input data" });
-      }
-
       // Check if the ensemble exists
       const existingEnsemble = await Ensemble.findOne({ _id: ensembleId });
       if (!existingEnsemble) {
@@ -109,32 +96,42 @@ class EnsembleController {
           .json({ message: "Ensemble not found" });
       }
 
-      // Check if the creator exists
-      const selectedCreator = await User.findOne({ _id: creator });
-      if (!selectedCreator) {
-        return res
-          .status(HTTP_STATUS.NOT_FOUND)
-          .json({ message: "Creator not found" });
+      // Check and update name
+      if (name) {
+        existingEnsemble.name = name;
       }
 
-      // Validate and verify articles
-      const verifiedArticles = [];
-      for (const articleId of articles) {
-        const article = await Article.findOne({ _id: articleId });
-        if (article) {
-          verifiedArticles.push(article._id);
-        } else {
+      // Check and update description
+      if (description) {
+        existingEnsemble.description = description;
+      }
+
+      // Check and update creator
+      if (creator) {
+        const selectedCreator = await User.findOne({ _id: creator });
+        if (!selectedCreator) {
           return res
             .status(HTTP_STATUS.NOT_FOUND)
-            .json({ message: `Article with ID ${articleId} not found` });
+            .json({ message: "Creator not found" });
         }
+        existingEnsemble.creator = selectedCreator._id;
       }
 
-      // Update ensemble fields
-      existingEnsemble.name = name;
-      existingEnsemble.description = description;
-      existingEnsemble.creator = selectedCreator._id;
-      existingEnsemble.articles = verifiedArticles;
+      // Check and update articles
+      if (articles) {
+        const verifiedArticles = [];
+        for (const articleId of articles) {
+          const article = await Article.findOne({ _id: articleId });
+          if (article) {
+            verifiedArticles.push(article._id);
+          } else {
+            return res
+              .status(HTTP_STATUS.NOT_FOUND)
+              .json({ message: `Article with ID ${articleId} not found` });
+          }
+        }
+        existingEnsemble.articles = verifiedArticles;
+      }
 
       // Save the updated ensemble
       await existingEnsemble.save();

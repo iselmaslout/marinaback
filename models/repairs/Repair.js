@@ -1,30 +1,28 @@
 const mongoose = require("mongoose");
 
-const repairsSchema = new mongoose.Schema(
+const repairSchema = new mongoose.Schema(
   {
-    satus: {
+    status: {
       type: String,
       required: true,
       default: "Pending",
     },
-    repairer: {
+    technicien: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
-      ref: "Repairer",
+      ref: "Technicien",
     },
-    phone: {
-      type: String,
+    client: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      ref: "Client",
+    },
+    repairedArticles: {
+      type: [mongoose.Schema.Types.Mixed], // Array of Mixed type
       required: true,
     },
-    articles: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        required: true,
-        ref: "Article",
-      },
-    ],
     price: {
-      type: Number, 
+      type: Number,
       required: true,
       default: 0,
     },
@@ -32,4 +30,4 @@ const repairsSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Repair", repairsSchema);
+module.exports = mongoose.model("Repair", repairSchema);

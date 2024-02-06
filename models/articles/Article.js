@@ -40,11 +40,11 @@ const articleSchema = mongoose.Schema(
       type: String,
       required: true,
     },
-    number: {
-      type: Number,
-      required: true,
-      default: 0,
-    },
+    // countArticle: {
+    //   type: Number,
+    //   required: true,
+    //   default: 0,
+    // },
     catalog: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
